@@ -1,0 +1,15 @@
+---
+- hosts: cisco_asa
+  gather_facts: false
+
+  collections:
+    - cisco.asa
+
+  tasks:
+    - name: Backup Config
+      cisco.asa.asa_config:
+        backup: true
+        backup_options:
+          dir_path: /path/to/where/backups/will/be/stored/on/ansible/host
+          filename: backup.cfg
+        passwords: true
