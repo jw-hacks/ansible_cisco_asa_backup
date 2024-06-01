@@ -1,13 +1,20 @@
 ---
-- name: Get Date from Ansible Host
+- name: Get Date from Local System and Store it to Variables.
   hosts: localhost
   gather_facts: false
 
   tasks:
 
-  - name: Get Date
+  - name: Get Date from Local System
     ansible.builtin.command: date +%Y%m%d
     register: timestamp
+
+  - name: Create directory named the current date
+    ansible.builtin.command: "mkdir /path/to/backups/{{ timestamp.stdout }}_backups"
+
+  - name: Create variable for new directory
+    ansible.builtin.command: "echo '/path/to/backups/{{ timestamp.stdout }}_backups'"
+    register: output_directory
 
 - name: Backup Cisco ASA Config
   hosts: cisco_asa
@@ -21,6 +28,24 @@
     cisco.asa.asa_config:
       backup: true
       backup_options:
-        dir_path: /path/to/where/backups/will/be/stored/on/ansible/host
-        filename: "config-{{ hostvars.localhost.timestamp.stdout }}.txt"
+        dir_path: "{{ hostvars.localhost.output_directory.stdout }}"
+        filename: "{{ inventory_hostname }}_{{ hostvars.localhost.timestamp.stdout }}.txt"
       passwords: true
+
+- name: Upload Backup to Blob Storage
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - azure.azcollection.azure_rm_storageblob
+
+  tasks:
+
+  - name: Connect to Azure Blob Storage and Upload Backup File
+    azure_rm_storageblob:
+      resource_group: your_resource_group
+      storage_account_name: your_storage_account
+      container: your_container
+      batch_upload_src: "{{ output_directory.stdout }}"
+      auth_source: env
+      cert_validation_mode: ignore
+  
