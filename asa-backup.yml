@@ -32,7 +32,7 @@
     - azure.azcollection.azure_rm_storageblob
 
   tasks:
-#On subsequent runs this also uploads the repo folder, need to fix.
+# On subsequent runs this also uploads the repo folder, need to fix.
   - name: Connect to Azure Blob Storage and Upload Backup File
     azure_rm_storageblob:
       resource_group: your_resource_group
@@ -45,13 +45,13 @@
 
   - name: Clone the Backuo Repo
     git:
-#I know the line below is an insecure method, this will eventually be refactored into a more secure method
+# I know the line below is an insecure method, this will eventually be refactored into a more secure method
       repo: https:PAT_NAME:PAT_TOKEN@dev.azure.com/ORG_NAME/PROJECT_NAME/_git/REPO_NAME
       dest: "/path/to/backup/folder/repo
-#Not sure if I need the line below, will eventually test and remove if not needed.
+# Not sure if I need the line below, will eventually test and remove if not needed.
       accept_hostkey: yes
       force: yes
-#Does the line below get used anywhere?
+# Does the line below get used anywhere?
     register: clone_result
     delegate_to: localhost
     run_once: true
