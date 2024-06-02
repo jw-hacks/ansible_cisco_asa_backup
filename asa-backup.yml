@@ -45,8 +45,9 @@
 
   - name: Clone the Backuo Repo
     git:
+    #I know the line below is insecure, will refactor to make more secure.
       repo: https:PAT_NAME:PAT_TOKEN@dev.azure.com/ORG_NAME/PROJECT_NAME/_git/REPO_NAME
-      dest: "/path/to/backup/folder/repo
+      dest: "/path/to/backup/folder/repo"
       accept_hostkey: yes
       force: yes
     register: clone_result
