@@ -41,8 +41,7 @@
       batch_upload_src: /path/to/backups/folder
       auth_source: env
       cert_validation_mode: ignore
-    #The line below is temporary, need to fix error when uploading duplicate files.
-    ignore_errors: yes
+      force: true
 
   - name: Clone the Backuo Repo
     git:
