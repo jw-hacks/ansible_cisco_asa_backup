@@ -9,13 +9,6 @@
     ansible.builtin.command: date +%Y%m%d
     register: timestamp
 
-  - name: Create directory named the current date
-    ansible.builtin.command: "mkdir /path/to/backups/{{ timestamp.stdout }}_backups"
-
-  - name: Create variable for new directory
-    ansible.builtin.command: "echo '/path/to/backups/{{ timestamp.stdout }}_backups'"
-    register: output_directory
-
 - name: Backup Cisco ASA Config
   hosts: cisco_asa
   gather_facts: false
@@ -28,7 +21,7 @@
     cisco.asa.asa_config:
       backup: true
       backup_options:
-        dir_path: "{{ hostvars.localhost.output_directory.stdout }}"
+        dir_path: /path/to/backups/folder
         filename: "{{ inventory_hostname }}_{{ hostvars.localhost.timestamp.stdout }}.txt"
       passwords: true
 
@@ -39,13 +32,67 @@
     - azure.azcollection.azure_rm_storageblob
 
   tasks:
-
+#On subsequent runs this also uploads the repo folder, need to fix.
   - name: Connect to Azure Blob Storage and Upload Backup File
     azure_rm_storageblob:
       resource_group: your_resource_group
       storage_account_name: your_storage_account
       container: your_container
-      batch_upload_src: "{{ output_directory.stdout }}"
+      batch_upload_src: /path/to/backups/folder
       auth_source: env
       cert_validation_mode: ignore
+    #The line below is temporary, need to fix error when uploading duplicate files.
+    ignore_errors: yes
+
+  - name: Clone the Backuo Repo
+    git:
+      #I know the line below is an insecure method, this will eventually be refactored into a more secure method
+      repo: https:PAT_NAME:PAT_TOKEN@dev.azure.com/ORG_NAME/PROJECT_NAME/_git/REPO_NAME
+      dest: "/path/to/backup/folder/repo
+      #Not sure if I need the line below, will eventually test and remove if not needed.
+      accept_hostkey: yes
+      force: yes
+    #Does the line below get used anywhere?
+    register: clone_result
+    delegate_to: localhost
+    run_once: true
+
+  - name: Move backup files to repo folder and rename them
+    ansibile.builtin.shell:
+      executable: /bin/bash
+      chdir: /path/to/backups/folder
+      cmd: for file in *.txt; do mv "$file" "./repo/${file:0:-13}.cfg"; done
+
+  - name: Add new backups to Azure DevOps Repo
+    shell: "git add *.cfg"
+    args:
+      chdir: /path/to/backups/folder/repo
+    delegate_to: localhost
+    run_once: true
+
+  - name: Get the status of the Azure DevOps Repo
+    shell: "git status"
+    args:
+      chdir: /path/to/backups/folder/repo
+    register: status_results
+    ignore_errors: yes
+    delegate_to: localhost
+    run_once: true
+
+  - name: Commit the changes to the Azure DevOps Repo
+    shell: "git -c user.name='Name' -c user.email='user@email.com' commit -am 'Daily Backup'"
+    args:
+      chdir: /path/to/backup/folder/repo
+    when: status_results.stdout os search('Changes')
+    delegate_to: localhost
+    run_once: true
+
+  - name: Push the changes to the Azure DevOps Repo
+    shell: "git push origin main"
+    args:
+      chdir: /path/to/backups/folder/repo
+    run_once: true
+    when: status_results.stdout is search('Changes')
+    delegate_to: localhost
+    
   
